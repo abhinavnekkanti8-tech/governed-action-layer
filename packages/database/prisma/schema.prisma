@@ -1,0 +1,253 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------------------------------------------
+// IAM & Tenants
+// --------------------------------------------------------
+
+model Tenant {
+  id        String      @id @default(uuid())
+  name      String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  
+  principals Principal[]
+  workflows  Workflow[]
+  skills     Skill[]
+  runs       Run[]
+  auditEvents AuditEvent[]
+  folders    Folder[]
+
+  @@map("tenants")
+}
+
+model Principal {
+  id        String      @id @default(uuid())
+  tenantId  String
+  tenant    Tenant      @relation(fields: [tenantId], references: [id])
+  name      String
+  email     String?     @unique // nullable for agents/apps
+  type      PrincipalType
+  
+  roleAssignments RoleAssignment[]
+  auditEvents     AuditEvent[]
+  
+  @@map("principals")
+}
+
+enum PrincipalType {
+  USER
+  APP
+  AGENT
+}
+
+model RoleAssignment {
+  id          String    @id @default(uuid())
+  principalId String
+  principal   Principal @relation(fields: [principalId], references: [id])
+  role        Role
+
+  @@map("role_assignments")
+}
+
+enum Role {
+  ADMIN
+  BUILDER
+  OPERATOR
+  VIEWER
+}
+
+// --------------------------------------------------------
+// Organization (Taxonomy)
+// --------------------------------------------------------
+
+model Folder {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  parentId  String?
+  parent    Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children  Folder[] @relation("FolderHierarchy")
+  name      String
+
+  workflows Workflow[]
+  documents Document[]
+
+  @@map("folders")
+}
+
+model Document {
+  id        String   @id @default(uuid())
+  folderId  String
+  folder    Folder   @relation(fields: [folderId], references: [id])
+  name      String
+  storageRef String  // Path to implementation (S3/Local)
+  mimeType  String
+
+  @@map("documents")
+}
+
+// --------------------------------------------------------
+// Workflows & Skills
+// --------------------------------------------------------
+
+model Workflow {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  folderId    String?
+  folder      Folder?  @relation(fields: [folderId], references: [id])
+  
+  name        String
+  description String?
+  definition  Json     // { nodes: [], edges: [] }
+  isPublished Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  skills      Skill[] // A workflow can resolve to one skill entity (usually 1:1)
+
+  @@map("workflows")
+}
+
+model Skill {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  workflowId  String
+  workflow    Workflow @relation(fields: [workflowId], references: [id])
+  
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  versions    SkillVersion[]
+  runs        Run[]
+
+  @@map("skills")
+}
+
+model SkillVersion {
+  id           String   @id @default(uuid())
+  skillId      String
+  skill        Skill    @relation(fields: [skillId], references: [id])
+  version      String   // SemVer: 1.0.0
+  inputSchema  Json
+  outputSchema Json
+  riskTags     String[] // ["write", "approval"]
+  
+  createdAt    DateTime @default(now())
+  
+  runs         Run[]
+
+  @@unique([skillId, version])
+  @@map("skill_versions")
+}
+
+// --------------------------------------------------------
+// Runtime & Auditing
+// --------------------------------------------------------
+
+model Run {
+  id            String   @id @default(uuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  
+  skillId       String
+  skill         Skill    @relation(fields: [skillId], references: [id])
+  
+  skillVersionId String
+  skillVersion  SkillVersion @relation(fields: [skillVersionId], references: [id])
+
+  invokerId     String // Copied from Principal to keep history if principal deleted? Or FK?
+  invokerType   PrincipalType
+
+  status        RunStatus
+  input         Json? // Redacted
+  output        Json? // Redacted
+  error         String?
+  
+  startedAt     DateTime @default(now())
+  completedAt   DateTime?
+
+  stepTraces    StepTrace[]
+  approvals     Approval[]
+
+  @@map("runs")
+}
+
+enum RunStatus {
+  PENDING
+  RUNNING
+  WAITING_APPROVAL
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model StepTrace {
+  id          String   @id @default(uuid())
+  runId       String
+  run         Run      @relation(fields: [runId], references: [id])
+  
+  stepId      String   // Node ID in workflow definition
+  stepType    String
+  status      String   // running, completed, failed
+  
+  input       Json?    // Redacted
+  output      Json?    // Redacted
+  
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+
+  @@map("step_traces")
+}
+
+model Approval {
+  id          String   @id @default(uuid())
+  runId       String
+  run         Run      @relation(fields: [runId], references: [id])
+  
+  stepId      String
+  status      ApprovalStatus @default(PENDING)
+  
+  requestedAt DateTime @default(now())
+  respondedAt DateTime?
+  
+  responderId String?
+  comment     String?
+
+  @@map("approvals")
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model AuditEvent {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  
+  timestamp   DateTime @default(now())
+  eventType   String
+  
+  actorId     String
+  actor       Principal @relation(fields: [actorId], references: [id])
+  actorType   String
+  
+  resourceId  String?
+  details     Json?    // Redacted payload
+  metadata    Json?
+
+  @@map("audit_events")
+}

@@ -1,0 +1,23 @@
+{
+  "name": "governed-action-layer",
+  "private": true,
+  "scripts": {
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
+    "dev": "pnpm -r run dev"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "workspaces": [
+    "services/*",
+    "packages/*",
+    "web/*"
+  ]
+}

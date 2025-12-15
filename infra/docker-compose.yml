@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: anti-gravity-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: anti_gravity
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - anti-gravity-net
+
+  temporal:
+    image: temporalio/auto-setup:latest
+    container_name: anti-gravity-temporal
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=password
+      - POSTGRES_SEEDS=postgres
+    depends_on:
+      - postgres
+    ports:
+      - "7233:7233" # gRPC
+      - "8233:8233" # HTTP API
+      - "8081:8080" # UI (Mapped to 8081 to avoid conflict if dev uses 8080)
+    networks:
+      - anti-gravity-net
+
+networks:
+  anti-gravity-net:
+    driver: bridge
+
+volumes:
+  postgres_data:

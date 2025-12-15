@@ -1,0 +1,112 @@
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  
+  /* HSL Palette - Deep Space Theme */
+  --color-bg: 222 47% 11%;     /* #0f172a */
+  --color-surface: 217 33% 17%; /* #1e293b */
+  --color-surface-hover: 217 33% 22%;
+  --color-border: 215 25% 27%;
+  --color-primary: 250 100% 70%; /* #8b5cf6 - Violet */
+  --color-primary-hover: 250 100% 76%;
+  --color-text: 210 40% 98%;   /* #f8fafc */
+  --color-text-muted: 215 20% 65%;
+  
+  --radius: 0.5rem;
+  --header-height: 64px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: hsl(var(--color-bg));
+  color: hsl(var(--color-text));
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: hsla(var(--color-surface) / 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid hsla(var(--color-border) / 0.5);
+  border-radius: var(--radius);
+}
+
+.btn-primary {
+  background: hsl(var(--color-primary));
+  color: hsl(var(--color-bg));
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+/* Layout */
+.app-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 260px;
+  background: hsl(var(--color-surface));
+  border-right: 1px solid hsl(var(--color-border));
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header {
+  height: var(--header-height);
+  border-bottom: 1px solid hsl(var(--color-border));
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+  justify-content: space-between;
+}
+
+/* React Flow Customization */
+.react-flow__node {
+  background: hsl(var(--color-surface));
+  border: 1px solid hsl(var(--color-primary));
+  color: hsl(var(--color-text));
+  border-radius: var(--radius);
+  min-width: 150px;
+  padding: 10px;
+}
+
+.react-flow__handle {
+  background: hsl(var(--color-primary));
+  width: 8px;
+  height: 8px;
+}
+
+.react-flow__controls {
+  box-shadow: none;
+  border: 1px solid hsl(var(--color-border));
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  background: hsl(var(--color-surface));
+  border-bottom: 1px solid hsl(var(--color-border));
+  fill: hsl(var(--color-text)) !important;
+}
